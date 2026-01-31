@@ -55,17 +55,25 @@ export const ProductModal = () => {
                             </p>
 
                             <div className="space-y-3 mt-auto">
-                                <a
-                                    href={PRODUCT_URLS[product.id] || '#'}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                    }}
-                                >
-                                    <span>商品を見てみる！</span>
-                                </a>
+                                {(() => {
+                                    const url = PRODUCT_URLS[Number(product.id)];
+                                    if (!url) console.warn(`Product URL not found for ID: ${product.id}`);
+
+                                    return (
+                                        <a
+                                            href={url || '#'}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (!url) alert('商品ページが見つかりませんでした。');
+                                            }}
+                                        >
+                                            <span>商品を見てみる！</span>
+                                        </a>
+                                    );
+                                })()}
 
                                 <button
                                     onClick={() => selectProduct(null)}
