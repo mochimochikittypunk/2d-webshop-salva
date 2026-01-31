@@ -21,7 +21,7 @@ function App() {
   }, []);
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-black">
+    <div className="relative w-screen h-[100dvh] overflow-hidden bg-black supports-[height:100cqh]:h-[100cqh] supports-[height:100svh]:h-[100svh]">
       <ShopScene onLoadComplete={() => setTimeout(() => setIsLoading(false), 800)} />
 
       {/* Loading Screen */}
@@ -33,7 +33,7 @@ function App() {
       )}
 
       {/* UI Overlay Placeholder */}
-      <div className={`absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-8 transition-opacity duration-1000 ${isLoading ? 'opacity-0' : 'opacity-100'}`}>
+      <div className={`absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-8 pb-[calc(2rem+env(safe-area-inset-bottom))] transition-opacity duration-1000 ${isLoading ? 'opacity-0' : 'opacity-100'}`}>
 
         {/* Top Bar */}
         <div className="flex justify-start pointer-events-auto">
