@@ -1,0 +1,15 @@
+name = "rpg-backend"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "rpg-db"
+database_id = "f1615158-ea9a-46fc-b107-549b69f352d3"
+
+[[kv_namespaces]]
+binding = "CART_SESSION"
+id = "5d9d714eab644e1ca709ea3c72c609de"
+
+[vars]
+# API Keys etc

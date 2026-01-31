@@ -1,0 +1,17 @@
+{
+    "name": "rpg-backend",
+    "version": "0.0.1",
+    "scripts": {
+        "dev": "wrangler dev src/index.ts",
+        "deploy": "wrangler deploy --minify src/index.ts",
+        "db:create": "wrangler d1 execute rpg-db --local --file=./schema.sql"
+    },
+    "dependencies": {
+        "hono": "^4.1.0",
+        "@rpg-ecommerce/shared": "*"
+    },
+    "devDependencies": {
+        "@cloudflare/workers-types": "^4.20240208.0",
+        "wrangler": "^3.28.1"
+    }
+}
