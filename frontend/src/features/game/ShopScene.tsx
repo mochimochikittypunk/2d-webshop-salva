@@ -39,10 +39,11 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
             const _guideTexture = await Assets.load('/asset-sample1.png'); // Reference Guide
 
             // Load Salva Expressions
-            const _salvaTextures = {
+            const salvaTextures = {
                 normal: await Assets.load('/char-salva-transparent.png'),
                 happy: await Assets.load('/char-salva-happy-transparent.png'),
                 surprised: await Assets.load('/char-salva-surprised-transparent.png'),
+                dating: await Assets.load('/toki-memo.PNG') // Hi-res Tokimeki Mode
             };
 
             const background = new Sprite(bgTexture);
@@ -57,27 +58,9 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
             background.scale.set(scale);
             app.stage.addChild(background);
 
-            // Fetch Products from API (for future use in shelf display)
-            try {
-                const { fetchProducts } = await import('../../lib/api');
-                const _products: any[] = await fetchProducts();
-                // Products are fetched but not displayed as sprites currently
-                // They are used for the chat interaction instead
+            // Fetch Products logic (removed for brevity as it's handled in chat)
 
-            } catch (e) {
-                console.error("Failed to load products", e);
-            }
-
-
-            // Salva Textures
-            const salvaTexturesNew = {
-                normal: await Assets.load('/char-salva-transparent.png'),
-                happy: await Assets.load('/char-salva-happy-transparent.png'),
-                surprised: await Assets.load('/char-salva-surprised-transparent.png'),
-                dating: await Assets.load('/toki-memo.PNG') // Hi-res Tokimeki Mode
-            };
-
-            const salva = new Sprite(salvaTexturesNew.normal);
+            const salva = new Sprite(salvaTextures.normal);
             salva.anchor.set(0.5);
             // Center Salva
             salva.x = app.screen.width / 2;
@@ -157,8 +140,8 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
                     const menuVisible = lastMsg.options?.some(o => o.action === 'dating_start');
 
                     if (menuVisible) {
-                        if (salva.texture !== salvaTexturesNew.normal) {
-                            salva.texture = salvaTexturesNew.normal;
+                        if (salva.texture !== salvaTextures.normal) {
+                            salva.texture = salvaTextures.normal;
                             updateHitArea(false);
                             salva.scale.set(NORMAL_SCALE);
                         }
@@ -168,8 +151,8 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
                         const isDatingResult = lastMsg.options?.some(o => o.action === 'reset' && !lastMsg.content.includes('いらっしゃいませ'));
 
                         if (isDatingStep || isDatingResult) {
-                            if (salva.texture !== salvaTexturesNew.dating) {
-                                salva.texture = salvaTexturesNew.dating;
+                            if (salva.texture !== salvaTextures.dating) {
+                                salva.texture = salvaTextures.dating;
                                 updateHitArea(true);
                                 // Set to larger dating scale
                                 salva.scale.set(DATING_SCALE);
@@ -184,11 +167,11 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
 
             salva.on('pointerdown', () => {
                 // Disable expression switching during dating mode?
-                if (salva.texture === salvaTexturesNew.dating) return;
+                if (salva.texture === salvaTextures.dating) return;
 
                 expressionIndex = (expressionIndex + 1) % expressions.length;
                 const nextMood = expressions[expressionIndex];
-                salva.texture = salvaTexturesNew[nextMood];
+                salva.texture = salvaTextures[nextMood];
             });
 
             app.stage.addChild(salva);
