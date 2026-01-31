@@ -35,16 +35,23 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
             }
 
             // Load Assets
-            const bgTexture = await Assets.load('/bg-shop.png');
-            const _guideTexture = await Assets.load('/asset-sample1.png'); // Reference Guide
+            let bgTexture, salvaTextures;
+            try {
+                bgTexture = await Assets.load('/bg-shop.png');
 
-            // Load Salva Expressions
-            const salvaTextures = {
-                normal: await Assets.load('/char-salva-transparent.png'),
-                happy: await Assets.load('/char-salva-happy-transparent.png'),
-                surprised: await Assets.load('/char-salva-surprised-transparent.png'),
-                dating: await Assets.load('/toki-memo.PNG') // Hi-res Tokimeki Mode
-            };
+                // Load Salva Expressions
+                salvaTextures = {
+                    normal: await Assets.load('/char-salva-transparent.png'),
+                    happy: await Assets.load('/char-salva-happy-transparent.png'),
+                    surprised: await Assets.load('/char-salva-surprised-transparent.png'),
+                    dating: await Assets.load('/toki-memo.PNG') // Hi-res Tokimeki Mode
+                };
+            } catch (error) {
+                console.error("Failed to load assets:", error);
+                // Emergency callback to remove loading screen even if assets fail
+                if (onLoadComplete) onLoadComplete();
+                return;
+            }
 
             const background = new Sprite(bgTexture);
             background.anchor.set(0.5);
