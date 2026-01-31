@@ -43,10 +43,10 @@ function App() {
 
         {/* Chat Window */}
         <ChatWindow />
-
-        {/* Product Modal */}
-        <ProductModal />
       </div>
+
+      {/* Product Modal */}
+      <ProductModal />
     </div>
   );
 }

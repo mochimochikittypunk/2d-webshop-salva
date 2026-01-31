@@ -1,7 +1,7 @@
 import { useStore } from '@nanostores/react';
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { $chatHistory, $isChatOpen, $highlightedProductId } from '../../features/store/gameStore';
+import { $chatHistory, $isChatOpen, $highlightedProductId, INITIAL_CHAT_HISTORY } from '../../features/store/gameStore';
 
 // 商品キーワードマッピング（商品名の一部 → 商品ID）
 const PRODUCT_KEYWORDS: Record<string, number> = {
@@ -166,14 +166,12 @@ export const ChatWindow = () => {
                     {/* Reset Button */}
                     <button
                         onClick={() => {
-                            import('../../features/store/gameStore').then(({ $chatHistory, INITIAL_CHAT_HISTORY }) => {
-                                const currentHistory = $chatHistory.get();
-                                logChatToSheet(currentHistory, 'Manual Reset'); // Log on manual reset
-                                $chatHistory.set(INITIAL_CHAT_HISTORY);
-                            });
+                            const currentHistory = $chatHistory.get();
+                            logChatToSheet(currentHistory, 'Manual Reset'); // Log on manual reset
+                            $chatHistory.set(INITIAL_CHAT_HISTORY);
                             setIsTyping(false);
                         }}
-                        className="absolute top-2 right-2 text-[10px] text-zinc-400 hover:text-white border border-zinc-600 hover:border-zinc-400 rounded px-2 py-0.5 transition-colors z-10"
+                        className="absolute top-2 right-2 text-xs text-zinc-400 hover:text-white border border-zinc-600 hover:border-zinc-400 rounded px-3 py-1.5 transition-colors z-20 cursor-pointer"
                     >
                         ↻ 最初に戻る
                     </button>
@@ -183,8 +181,8 @@ export const ChatWindow = () => {
                             <div key={idx} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                                 <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                     <span className={`px-2 py-1 rounded-lg text-xs md:text-sm whitespace-pre-wrap max-w-full md:max-w-[600px] ${msg.role === 'user'
-                                        ? 'bg-blue-600/50 text-white'
-                                        : 'bg-yellow-600/20 text-yellow-100 border border-yellow-500/30'
+                                            ? 'bg-blue-600/50 text-white'
+                                            : 'bg-yellow-600/20 text-yellow-100 border border-yellow-500/30'
                                         }`}>
                                         {msg.role === 'salva' && <span className="mr-2 font-bold text-yellow-400">Salva</span>}
                                         {msg.content}
@@ -211,6 +209,7 @@ export const ChatWindow = () => {
                                                                 let nextMessage = null;
                                                                 let nextOptions: any[] = [];
 
+                                                                // ... Dating Sim Logic Steps ...
                                                                 // Step 1: Start -> Confession
                                                                 if (opt.action === 'dating_start') {
                                                                     nextMessage = 'えっ…？ どうしたの、そんな熱っぽい目をして…';
@@ -357,10 +356,8 @@ export const ChatWindow = () => {
                                                     }
 
                                                     // Standard API Call for normal commands (1-3)
-                                                    // Call external AI Salva API
                                                     setIsTyping(true);
                                                     try {
-                                                        // Convert history format: 'salva' -> 'bot'
                                                         const apiHistory = history.map((msg: { role: string; content: string }) => ({
                                                             role: msg.role === 'salva' ? 'bot' : 'user',
                                                             content: msg.content
@@ -374,7 +371,7 @@ export const ChatWindow = () => {
                                                             body: JSON.stringify({
                                                                 message: opt.value,
                                                                 history: apiHistory,
-                                                                isExternal: true // Short response mode
+                                                                isExternal: true
                                                             }),
                                                         });
 
@@ -383,23 +380,19 @@ export const ChatWindow = () => {
                                                         }
 
                                                         const data = await response.json();
-                                                        const aiResponse = data.response || 'すみません、うまく聞き取れませんでした。';
+                                                        const aiResponse = (data.response || 'すみません、うまく聞き取れませんでした。').replace(/\*\*/g, '');
 
-                                                        // 商品ハイライト検出
                                                         detectAndHighlightProduct(aiResponse);
 
-                                                        // Add AI response to chat WITHOUT options (text input mode)
                                                         import('../../features/store/gameStore').then(({ $chatHistory }) => {
                                                             const currentHistory = $chatHistory.get();
                                                             $chatHistory.set([...currentHistory, {
                                                                 role: 'salva',
                                                                 content: aiResponse
-                                                                // No options = text input mode
                                                             }]);
                                                         });
                                                     } catch (err) {
                                                         console.error('AI Salva API Error:', err);
-                                                        // Fallback message on error (no options = text input mode)
                                                         import('../../features/store/gameStore').then(({ $chatHistory }) => {
                                                             const currentHistory = $chatHistory.get();
                                                             $chatHistory.set([...currentHistory, {

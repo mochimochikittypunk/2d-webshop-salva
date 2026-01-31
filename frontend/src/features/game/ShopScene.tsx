@@ -8,6 +8,7 @@ interface ShopSceneProps {
 export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const appRef = useRef<Application | null>(null);
+    const subscriptionsRef = useRef<(() => void)[]>([]);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -20,6 +21,10 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
                 appRef.current = null;
             }
 
+            // Clear previous subscriptions
+            subscriptionsRef.current.forEach(unsub => unsub());
+            subscriptionsRef.current = [];
+
             const app = new Application();
 
             await app.init({
@@ -28,6 +33,12 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
                 resolution: window.devicePixelRatio || 1,
                 autoDensity: true,
             });
+
+            // Check if component unmounted during async init
+            if (!containerRef.current) {
+                app.destroy();
+                return;
+            }
 
             if (containerRef.current) {
                 containerRef.current.appendChild(app.canvas);
@@ -52,6 +63,9 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
                 if (onLoadComplete) onLoadComplete();
                 return;
             }
+
+            // Check again if unmounted after asset load
+            if (!appRef.current) return;
 
             const background = new Sprite(bgTexture);
             background.anchor.set(0.5);
@@ -123,7 +137,8 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
 
             // Subscribe to chat history to switch modes
             import('../../features/store/gameStore').then(({ $chatHistory }) => {
-                $chatHistory.subscribe(history => {
+                const unsub = $chatHistory.subscribe(history => {
+                    if (!appRef.current) return; // Guard against destroyed app
                     try {
                         if (history.length === 0) return;
                         const lastMsg = history[history.length - 1];
@@ -154,6 +169,7 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
                         console.error('Chat history subscription error:', err);
                     }
                 });
+                subscriptionsRef.current.push(unsub);
             });
 
             let expressionIndex = 0;
@@ -274,7 +290,11 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
                 let blinkInterval: ReturnType<typeof setInterval> | null = null;
                 let currentHighlightId: number | null = null;
 
-                $highlightedProductId.subscribe(productId => {
+                const unsub = $highlightedProductId.subscribe(productId => {
+                    if (!appRef.current) {
+                        if (blinkInterval) clearInterval(blinkInterval);
+                        return;
+                    }
                     // 前のハイライトをクリア
                     if (blinkInterval) {
                         clearInterval(blinkInterval);
@@ -282,7 +302,7 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
                     }
                     if (currentHighlightId !== null) {
                         const prevHit = shelfHitAreas.get(currentHighlightId);
-                        if (prevHit) {
+                        if (prevHit && !prevHit.destroyed) {
                             prevHit.clear();
                             prevHit.rect(0, 0, 40, 40);
                             prevHit.fill({ color: 0xffffff, alpha: 0.01 });
@@ -293,10 +313,14 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
 
                     if (productId !== null) {
                         const hit = shelfHitAreas.get(productId);
-                        if (hit) {
+                        if (hit && !hit.destroyed) {
                             let visible = true;
                             // 点滅アニメーション（300msごとに切り替え）
                             blinkInterval = setInterval(() => {
+                                if (hit.destroyed) {
+                                    if (blinkInterval) clearInterval(blinkInterval);
+                                    return;
+                                }
                                 hit.clear();
                                 hit.rect(0, 0, 40, 40);
                                 if (visible) {
@@ -311,10 +335,13 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
                         }
                     }
                 });
+                subscriptionsRef.current.push(unsub);
             });
 
             // Handle Resize
             const resize = () => {
+                if (!appRef.current || !background.texture) return;
+
                 // Background logic
                 background.x = app.screen.width / 2;
                 background.y = app.screen.height / 2;
@@ -359,18 +386,23 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
 
             if (onLoadComplete) onLoadComplete();
 
-            // Cleanup for this effect
-            return () => {
-                window.removeEventListener('resize', resize);
-            };
-            // Cleanup function returned from initApp is not used directly by useEffect cleanup
-            // because initApp is async. We handle cleanup in useEffect return.
+            // Cleanup function passed to useEffect return (via closure or modifying appRef?)
+            // We can't return from initApp to useEffect directly.
+            // We handle Window listener cleanup here but call it from useEffect return.
+            (app as any)._customResizeCleanup = () => window.removeEventListener('resize', resize);
         };
 
         void initApp();
 
         return () => {
+            // Cleanup subscriptions
+            subscriptionsRef.current.forEach(unsub => unsub());
+            subscriptionsRef.current = [];
+
             if (appRef.current) {
+                if ((appRef.current as any)._customResizeCleanup) {
+                    (appRef.current as any)._customResizeCleanup();
+                }
                 appRef.current.destroy(true, { children: true, texture: true });
                 appRef.current = null;
             }

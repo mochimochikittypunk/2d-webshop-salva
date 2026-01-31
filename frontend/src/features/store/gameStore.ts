@@ -51,6 +51,8 @@ export function selectProduct(product: Product | null) {
     $selectedProduct.set(product);
     if (product) {
         $gameState.set('browsing');
+        // Stop blinking when product is clicked
+        $highlightedProductId.set(null);
     } else {
         $gameState.set('idle');
     }
