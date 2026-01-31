@@ -353,7 +353,12 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
                 salva.y = app.screen.height * 0.65;
                 // Keep scale relative to background or screen height
                 // Further reduced to 0.35 based on feedback "too big"
-                salva.scale.set(0.35 * (s / scale));
+
+                // Mobile adjustment: Reduce by 25% if screen width < 600px
+                const isMobile = app.screen.width < 600;
+                const mobileFactor = isMobile ? 0.75 : 1.0;
+
+                salva.scale.set(0.35 * (s / scale) * mobileFactor);
 
                 // Guide logic
                 // if (guide) {
