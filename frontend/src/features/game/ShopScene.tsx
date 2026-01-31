@@ -38,9 +38,6 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
             const bgTexture = await Assets.load('/bg-shop.png');
             const _guideTexture = await Assets.load('/asset-sample1.png'); // Reference Guide
 
-            // Preload known product assets
-            const coffeeTexture = await Assets.load('/item-coffee.png');
-
             // Load Salva Expressions
             const _salvaTextures = {
                 normal: await Assets.load('/char-salva-transparent.png'),
@@ -60,42 +57,12 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
             background.scale.set(scale);
             app.stage.addChild(background);
 
-            // Fetch Products from API
+            // Fetch Products from API (for future use in shelf display)
             try {
-                // Dynamic import to avoid top-level await issues if any, or just import at top
                 const { fetchProducts } = await import('../../lib/api');
-                const products: any[] = await fetchProducts(); // Use any for now or shared type
-
-                products.forEach((p) => {
-                    // Mapping logic: if slug is 'coffee-bean-001', place at specific spot
-                    if (p.slug === 'coffee-bean-001') {
-                        const productSprite = new Sprite(coffeeTexture);
-                        productSprite.anchor.set(0.5);
-                        productSprite.x = app.screen.width * 0.7; // Shelf Right
-                        productSprite.y = app.screen.height * 0.4; // Slightly higher
-                        productSprite.scale.set(0.4); // Responsive logic handled in resize
-
-                        productSprite.eventMode = 'static';
-                        productSprite.cursor = 'pointer';
-                        productSprite.on('pointerdown', () => {
-                            import('../../features/store/gameStore').then(({ selectProduct }) => {
-                                selectProduct({
-                                    id: p.id, // Now using number
-                                    slug: p.slug,
-                                    name: p.name,
-                                    price: p.price,
-                                    description: p.description,
-                                    image_url: p.image_url,
-                                    metadata: p.metadata
-                                });
-                            });
-                        });
-
-                        // Tag sprite for resize handling
-                        (productSprite as any).isProduct = true;
-                        app.stage.addChild(productSprite);
-                    }
-                });
+                const _products: any[] = await fetchProducts();
+                // Products are fetched but not displayed as sprites currently
+                // They are used for the chat interaction instead
 
             } catch (e) {
                 console.error("Failed to load products", e);
