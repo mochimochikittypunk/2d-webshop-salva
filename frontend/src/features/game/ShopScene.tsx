@@ -77,31 +77,39 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
 
             // Define precise HitArea to ignore transparent corners
             const updateHitArea = (isDating: boolean) => {
-                const tex = salva.texture;
-                const sw = tex.width;
-                const sh = tex.height;
-                // Reset hit area if null or if switching modes
-                if (isDating) {
-                    // Tokimeki sprite might have different transparency/shape
-                    // For now, use a simple box or approximation
-                    salva.hitArea = new Polygon([
-                        -sw * 0.4, -sh * 0.4,
-                        sw * 0.4, -sh * 0.4,
-                        sw * 0.4, sh * 0.5,
-                        -sw * 0.4, sh * 0.5
-                    ]);
-                } else {
-                    // Original approximate polygon
-                    salva.hitArea = new Polygon([
-                        -sw * 0.2, -sh * 0.45, // Top Left Head
-                        sw * 0.2, -sh * 0.45,  // Top Right Head
-                        sw * 0.3, -sh * 0.2,   // Ear Right
-                        sw * 0.45, sh * 0.1,   // Shoulder Right
-                        sw * 0.45, sh * 0.5,   // Bottom Right
-                        -sw * 0.45, sh * 0.5,  // Bottom Left
-                        -sw * 0.45, sh * 0.1,  // Shoulder Left
-                        -sw * 0.3, -sh * 0.2   // Ear Left
-                    ]);
+                try {
+                    const tex = salva.texture;
+                    if (!tex || !tex.width || !tex.height) {
+                        console.warn('updateHitArea: Invalid texture, skipping');
+                        return;
+                    }
+                    const sw = tex.width;
+                    const sh = tex.height;
+                    // Reset hit area if null or if switching modes
+                    if (isDating) {
+                        // Tokimeki sprite might have different transparency/shape
+                        // For now, use a simple box or approximation
+                        salva.hitArea = new Polygon([
+                            -sw * 0.4, -sh * 0.4,
+                            sw * 0.4, -sh * 0.4,
+                            sw * 0.4, sh * 0.5,
+                            -sw * 0.4, sh * 0.5
+                        ]);
+                    } else {
+                        // Original approximate polygon
+                        salva.hitArea = new Polygon([
+                            -sw * 0.2, -sh * 0.45, // Top Left Head
+                            sw * 0.2, -sh * 0.45,  // Top Right Head
+                            sw * 0.3, -sh * 0.2,   // Ear Right
+                            sw * 0.45, sh * 0.1,   // Shoulder Right
+                            sw * 0.45, sh * 0.5,   // Bottom Right
+                            -sw * 0.45, sh * 0.5,  // Bottom Left
+                            -sw * 0.45, sh * 0.1,  // Shoulder Left
+                            -sw * 0.3, -sh * 0.2   // Ear Left
+                        ]);
+                    }
+                } catch (err) {
+                    console.error('updateHitArea error:', err);
                 }
             };
             updateHitArea(false);
@@ -109,55 +117,34 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
             // Subscribe to chat history to switch modes
             import('../../features/store/gameStore').then(({ $chatHistory }) => {
                 $chatHistory.subscribe(history => {
-                    if (history.length === 0) return;
-                    const lastMsg = history[history.length - 1];
-                    // Check if *any* option in the last message is a dating action? 
-                    // No, check if the *previous* user choice led to a dating state.
-                    // Actually, easiest is to check if the last message has options with 'dating_' actions,
-                    // OR if we are inside the dating loop.
+                    try {
+                        if (history.length === 0) return;
+                        const lastMsg = history[history.length - 1];
 
-                    // Simple heuristic: If last Salva message has options starting with 'dating_', or 'reset' (indicating dating end flow)
-                    // But 'reset' is vague.
-                    // Let's check strictly for 'dating_' options.
-                    const _isDating = lastMsg.options?.some(o => o.action?.startsWith('dating_') || o.action === 'reset');
+                        const menuVisible = lastMsg.options?.some(o => o.action === 'dating_start');
 
-                    // Specific check: 'reset' also appears in Bad Ends? Yes.
-                    // But we only want to show Toki-Memo during the dating event.
-                    // If reset is present, it means we are at the END of dating or standard flow.
-                    // If we want to revert to Normal Salva ONLY when completely reset to initial state?
+                        if (menuVisible) {
+                            if (salva.texture !== salvaTextures.normal) {
+                                salva.texture = salvaTextures.normal;
+                                updateHitArea(false);
+                                salva.scale.set(NORMAL_SCALE);
+                            }
+                        } else {
+                            // Check if we are in dating steps
+                            const isDatingStep = lastMsg.options?.some(o => o.action && o.action.startsWith('dating_') && o.action !== 'dating_start');
+                            const isDatingResult = lastMsg.options?.some(o => o.action === 'reset' && !lastMsg.content.includes('いらっしゃいませ'));
 
-                    // Better: Check if we are currently in a dating flow.
-                    // Only switch if options suggest we are deeper in dating.
-                    // Start: dating_start option is visible -> We are in NORMAL mode (user hasn't clicked yet).
-                    // Next: dating_confess visible -> We are in DATING mode.
-
-                    // Logic:
-                    // If last message options contain 'dating_start' -> Normal Mode (Menu)
-                    // If last message options contain 'dating_confess', 'dating_help', 'dating_energy', 'dating_biz' -> Dating Mode
-                    // If last message options contain 'reset' (final result) -> Dating Mode (Result Screen)
-                    // If reset was clicked -> We go back to INITIAL history -> Normal Mode
-
-                    const menuVisible = lastMsg.options?.some(o => o.action === 'dating_start');
-
-                    if (menuVisible) {
-                        if (salva.texture !== salvaTextures.normal) {
-                            salva.texture = salvaTextures.normal;
-                            updateHitArea(false);
-                            salva.scale.set(NORMAL_SCALE);
-                        }
-                    } else {
-                        // Check if we are in dating steps
-                        const isDatingStep = lastMsg.options?.some(o => o.action && o.action.startsWith('dating_') && o.action !== 'dating_start');
-                        const isDatingResult = lastMsg.options?.some(o => o.action === 'reset' && !lastMsg.content.includes('いらっしゃいませ'));
-
-                        if (isDatingStep || isDatingResult) {
-                            if (salva.texture !== salvaTextures.dating) {
-                                salva.texture = salvaTextures.dating;
-                                updateHitArea(true);
-                                // Set to larger dating scale
-                                salva.scale.set(DATING_SCALE);
+                            if (isDatingStep || isDatingResult) {
+                                // Safety check: ensure dating texture exists before switching
+                                if (salvaTextures.dating && salva.texture !== salvaTextures.dating) {
+                                    salva.texture = salvaTextures.dating;
+                                    updateHitArea(true);
+                                    salva.scale.set(DATING_SCALE);
+                                }
                             }
                         }
+                    } catch (err) {
+                        console.error('Chat history subscription error:', err);
                     }
                 });
             });
@@ -186,7 +173,6 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
             // app.stage.addChild(guide);
 
 
-            app.stage.addChild(salva);
 
             // --- Interactive Shelves Setup ---
             // Background is 16:9 (usually 1792x1024 generated). 
