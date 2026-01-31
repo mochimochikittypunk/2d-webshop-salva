@@ -298,14 +298,6 @@ export const ChatWindow = () => {
                                                                     nextMessage = 'なんだ、びっくりさせないでよ。コーヒーでも飲む？ 落ち着くよ。';
                                                                     nextOptions = [{ label: '最初に戻る', value: 'うん', action: 'reset' }];
                                                                 }
-                                                                // Reset Logic
-                                                                else if (opt.action === 'reset') {
-                                                                    import('../../features/store/gameStore').then(({ INITIAL_CHAT_HISTORY }) => {
-                                                                        $chatHistory.set(INITIAL_CHAT_HISTORY);
-                                                                    });
-                                                                    setIsTyping(false); // Stop typing immediately on reset
-                                                                    return;
-                                                                }
 
                                                                 if (nextMessage) {
                                                                     $chatHistory.set([...history, {
@@ -317,6 +309,15 @@ export const ChatWindow = () => {
                                                                 setIsTyping(false); // Stop typing
                                                             });
                                                         }, 600); // Delay for realism
+                                                        return;
+                                                    }
+
+                                                    // Reset Logic (Fix for bug where reset triggers API call)
+                                                    if (opt.action === 'reset') {
+                                                        import('../../features/store/gameStore').then(({ INITIAL_CHAT_HISTORY, $chatHistory }) => {
+                                                            $chatHistory.set(INITIAL_CHAT_HISTORY);
+                                                        });
+                                                        setIsTyping(false);
                                                         return;
                                                     }
 
