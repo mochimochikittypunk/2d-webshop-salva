@@ -54,6 +54,58 @@ export const ChatWindow = () => {
     const isOpen = useStore($isChatOpen);
     const history = useStore($chatHistory);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
+
+    const handleSendMessage = async () => {
+        if (!inputRef.current) return;
+        const message = inputRef.current.value.trim();
+        if (!message) return;
+
+        // Clear input
+        inputRef.current.value = '';
+        inputRef.current.focus();
+
+        // Add User Message
+        const { addChatMessage, $chatHistory } = await import('../../features/store/gameStore');
+        addChatMessage('user', message);
+
+        // Call external AI Salva API
+        try {
+            const currentHistory = $chatHistory.get();
+            const apiHistory = currentHistory.map((msg: { role: string; content: string }) => ({
+                role: msg.role === 'salva' ? 'bot' : 'user',
+                content: msg.content
+            }));
+
+            const response = await fetch('https://ai-salva-chat.vercel.app/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: message,
+                    history: apiHistory,
+                    isExternal: true
+                }),
+            });
+
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
+            const data = await response.json();
+            const aiResponse = data.response || 'すみません、うまく聞き取れませんでした。';
+
+            // 商品ハイライト検出
+            detectAndHighlightProduct(aiResponse);
+
+            $chatHistory.set([...$chatHistory.get(), {
+                role: 'salva',
+                content: aiResponse
+            }]);
+        } catch (err) {
+            console.error('AI Salva API Error:', err);
+            $chatHistory.set([...$chatHistory.get(), {
+                role: 'salva',
+                content: 'すみません、今ちょっと調子が悪くて…もう一度話しかけてくれる？'
+            }]);
+        }
+    };
 
     // Auto-scroll to bottom when history changes
     useEffect(() => {
@@ -319,81 +371,34 @@ export const ChatWindow = () => {
                         ))}
                     </div>
 
-                    {/* Input Area Placeholder */}
-                    <div className="flex gap-2">
+                    {/* Input Area */}
+                    <div className="flex gap-2 items-center">
                         <textarea
+                            ref={inputRef}
                             placeholder="店主になにか聞く... (Enter 2回で送信)"
-                            className="flex-1 bg-white/10 border border-white/20 rounded px-3 py-1 text-sm text-white focus:outline-none focus:border-yellow-400 resize-none h-10"
-                            onKeyDown={async (e) => {
+                            className="flex-1 bg-white/10 border border-white/20 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400 resize-none h-12 leading-normal"
+                            onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                     const target = e.target as HTMLTextAreaElement;
-
-                                    // Check double enter for send
                                     const now = Date.now();
                                     const lastEnter = parseInt(target.dataset.lastEnter || '0');
 
                                     if (now - lastEnter < 500) {
-                                        // Double pressed within 500ms -> Send
-                                        e.preventDefault(); // Prevent newline
-
-                                        const message = target.value.trim();
-                                        if (!message) return;
-
-                                        // Clear input and reset timer
-                                        target.value = '';
+                                        e.preventDefault();
+                                        handleSendMessage();
                                         target.dataset.lastEnter = '0';
-
-                                        // Add User Message
-                                        import('../../features/store/gameStore').then(({ addChatMessage }) => {
-                                            addChatMessage('user', message);
-                                        });
-
-                                        // Call external AI Salva API
-                                        try {
-                                            const { $chatHistory } = await import('../../features/store/gameStore');
-                                            const currentHistory = $chatHistory.get();
-                                            const apiHistory = currentHistory.map((msg: { role: string; content: string }) => ({
-                                                role: msg.role === 'salva' ? 'bot' : 'user',
-                                                content: msg.content
-                                            }));
-
-                                            const response = await fetch('https://ai-salva-chat.vercel.app/api/chat', {
-                                                method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({
-                                                    message: message,
-                                                    history: apiHistory,
-                                                    isExternal: true
-                                                }),
-                                            });
-
-                                            if (!response.ok) throw new Error(`API Error: ${response.status}`);
-                                            const data = await response.json();
-                                            const aiResponse = data.response || 'すみません、うまく聞き取れませんでした。';
-
-                                            // 商品ハイライト検出
-                                            detectAndHighlightProduct(aiResponse);
-
-                                            $chatHistory.set([...$chatHistory.get(), {
-                                                role: 'salva',
-                                                content: aiResponse
-                                            }]);
-                                        } catch (err) {
-                                            console.error('AI Salva API Error:', err);
-                                            import('../../features/store/gameStore').then(({ $chatHistory }) => {
-                                                $chatHistory.set([...$chatHistory.get(), {
-                                                    role: 'salva',
-                                                    content: 'すみません、今ちょっと調子が悪くて…もう一度話しかけてくれる？'
-                                                }]);
-                                            });
-                                        }
                                     } else {
-                                        // First Enter or slow press -> allow newline but record time
                                         target.dataset.lastEnter = now.toString();
                                     }
                                 }
                             }}
                         />
+                        <button
+                            onClick={handleSendMessage}
+                            className="bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-lg px-4 h-12 flex items-center justify-center transition-colors shadow-lg active:scale-95 whitespace-nowrap"
+                        >
+                            送信
+                        </button>
                     </div>
                 </motion.div>
             )}
