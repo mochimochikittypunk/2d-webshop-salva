@@ -67,7 +67,7 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
             salva.y = app.screen.height * 0.65; // User Feedback: Move down (was 0.58)
 
             // Scales
-            const NORMAL_SCALE = 0.35;
+            const NORMAL_SCALE = 0.28; // Match Tokimeki mode size (~289px width)
             const DATING_SCALE = 0.50; // Larger for Tokimeki mode (approx 1.4x normal)
 
             salva.scale.set(NORMAL_SCALE);
@@ -327,7 +327,7 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
                 const isMobile = app.screen.width < 600;
                 const mobileFactor = isMobile ? 0.75 : 1.0;
 
-                salva.scale.set(0.35 * (s / scale) * mobileFactor);
+                salva.scale.set(0.28 * (s / scale) * mobileFactor);
 
                 // Guide logic
                 // if (guide) {
