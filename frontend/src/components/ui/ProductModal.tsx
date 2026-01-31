@@ -44,7 +44,15 @@ export const ProductModal = () => {
                 >
                     <div className="grid grid-cols-1 md:grid-cols-2">
                         <div className="h-64 md:h-auto bg-zinc-800 flex items-center justify-center p-8">
-                            <img src={product.image_url || '/item-coffee.png'} alt={product.name} className="max-h-full object-contain filter drop-shadow-lg" />
+                            <img
+                                src={`/${product.id}.png`}
+                                onError={(e) => {
+                                    e.currentTarget.src = '/item-coffee.png';
+                                    e.currentTarget.onerror = null; // Prevent infinite loop
+                                }}
+                                alt={product.name}
+                                className="max-h-full object-contain filter drop-shadow-lg"
+                            />
                         </div>
                         <div className="p-6 flex flex-col">
                             <h2 className="text-2xl font-bold text-white mb-2">{product.name}</h2>
