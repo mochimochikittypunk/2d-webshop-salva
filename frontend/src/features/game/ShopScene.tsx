@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Application, Assets, Sprite, Graphics, Text, TextStyle, Polygon } from 'pixi.js';
+import { Application, Assets, Sprite, Graphics, Polygon } from 'pixi.js';
 
 interface ShopSceneProps {
     onLoadComplete?: () => void;
@@ -36,13 +36,13 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
 
             // Load Assets
             const bgTexture = await Assets.load('/bg-shop.png');
-            const guideTexture = await Assets.load('/asset-sample1.png'); // Reference Guide
+            const _guideTexture = await Assets.load('/asset-sample1.png'); // Reference Guide
 
             // Preload known product assets
             const coffeeTexture = await Assets.load('/item-coffee.png');
 
             // Load Salva Expressions
-            const salvaTextures = {
+            const _salvaTextures = {
                 normal: await Assets.load('/char-salva-transparent.png'),
                 happy: await Assets.load('/char-salva-happy-transparent.png'),
                 surprised: await Assets.load('/char-salva-surprised-transparent.png'),
@@ -169,7 +169,7 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
                     // Simple heuristic: If last Salva message has options starting with 'dating_', or 'reset' (indicating dating end flow)
                     // But 'reset' is vague.
                     // Let's check strictly for 'dating_' options.
-                    const isDating = lastMsg.options?.some(o => o.action?.startsWith('dating_') || o.action === 'reset');
+                    const _isDating = lastMsg.options?.some(o => o.action?.startsWith('dating_') || o.action === 'reset');
 
                     // Specific check: 'reset' also appears in Bad Ends? Yes.
                     // But we only want to show Toki-Memo during the dating event.
@@ -247,7 +247,7 @@ export const ShopScene = ({ onLoadComplete }: ShopSceneProps) => {
             // X spread: -40% to +40% width
 
             const shelfConfig = [];
-            const cols = 10;
+            const _cols = 10;
             // User correction #6:
             // - GapX: 50 (Narrower)
             // - BotRowY: -45 (Confirmed)
