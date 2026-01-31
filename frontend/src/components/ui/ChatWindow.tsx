@@ -1,5 +1,5 @@
 import { useStore } from '@nanostores/react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { $chatHistory, $isChatOpen, $highlightedProductId } from '../../features/store/gameStore';
 
@@ -55,6 +55,8 @@ export const ChatWindow = () => {
     const history = useStore($chatHistory);
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
+    // Add local state for typing indicator
+    const [isTyping, setIsTyping] = useState(false);
 
     const handleSendMessage = async () => {
         if (!inputRef.current) return;
@@ -68,6 +70,9 @@ export const ChatWindow = () => {
         // Add User Message
         const { addChatMessage, $chatHistory } = await import('../../features/store/gameStore');
         addChatMessage('user', message);
+
+        // Set typing status
+        setIsTyping(true);
 
         // Call external AI Salva API
         try {
@@ -104,10 +109,13 @@ export const ChatWindow = () => {
                 role: 'salva',
                 content: 'すみません、今ちょっと調子が悪くて…もう一度話しかけてくれる？'
             }]);
+        } finally {
+            // Clear typing status
+            setIsTyping(false);
         }
     };
 
-    // Auto-scroll to bottom when history changes
+    // Auto-scroll to bottom when history changes or typing starts
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTo({
@@ -115,7 +123,7 @@ export const ChatWindow = () => {
                 behavior: 'smooth'
             });
         }
-    }, [history]);
+    }, [history, isTyping]);
 
     return (
         <AnimatePresence>
@@ -164,6 +172,7 @@ export const ChatWindow = () => {
 
                                                     // Special Logic for Dating Sim
                                                     if (opt.action && opt.action.startsWith('dating_')) {
+                                                        setIsTyping(true); // Start typing simulation
                                                         setTimeout(() => {
                                                             import('../../features/store/gameStore').then(({ $chatHistory }) => {
                                                                 const history = $chatHistory.get();
@@ -294,6 +303,7 @@ export const ChatWindow = () => {
                                                                     import('../../features/store/gameStore').then(({ INITIAL_CHAT_HISTORY }) => {
                                                                         $chatHistory.set(INITIAL_CHAT_HISTORY);
                                                                     });
+                                                                    setIsTyping(false); // Stop typing immediately on reset
                                                                     return;
                                                                 }
 
@@ -304,6 +314,7 @@ export const ChatWindow = () => {
                                                                         options: nextOptions
                                                                     }]);
                                                                 }
+                                                                setIsTyping(false); // Stop typing
                                                             });
                                                         }, 600); // Delay for realism
                                                         return;
@@ -311,6 +322,7 @@ export const ChatWindow = () => {
 
                                                     // Standard API Call for normal commands (1-3)
                                                     // Call external AI Salva API
+                                                    setIsTyping(true);
                                                     try {
                                                         // Convert history format: 'salva' -> 'bot'
                                                         const apiHistory = history.map((msg: { role: string; content: string }) => ({
@@ -359,6 +371,8 @@ export const ChatWindow = () => {
                                                                 content: 'すみません、今ちょっと調子が悪くて…もう一度話しかけてくれる？'
                                                             }]);
                                                         });
+                                                    } finally {
+                                                        setIsTyping(false);
                                                     }
                                                 }}
                                             >
@@ -369,6 +383,16 @@ export const ChatWindow = () => {
                                 )}
                             </div>
                         ))}
+
+                        {/* Typing Indicator */}
+                        {isTyping && (
+                            <div className="flex justify-start">
+                                <div className="bg-yellow-600/20 text-yellow-100 border border-yellow-500/30 px-3 py-2 rounded-lg text-xs md:text-sm flex items-center gap-1">
+                                    <span className="mr-2 font-bold text-yellow-400">Salva</span>
+                                    <span className="animate-pulse">入力中...</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Input Area */}
