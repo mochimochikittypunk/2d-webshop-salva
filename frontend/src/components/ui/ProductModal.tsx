@@ -2,6 +2,29 @@ import { useStore } from '@nanostores/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { $selectedProduct, selectProduct } from '../../features/store/gameStore';
 
+const PRODUCT_URLS: Record<number, string> = {
+    1: 'https://salvador.supersale.jp/items/130339919',
+    2: 'https://salvador.supersale.jp/items/74752871',
+    3: 'https://salvador.supersale.jp/items/130310000',
+    4: 'https://salvador.supersale.jp/items/127238259',
+    5: 'https://salvador.supersale.jp/items/125166173',
+    6: 'https://salvador.supersale.jp/items/123526831',
+    7: 'https://salvador.supersale.jp/items/116275842',
+    8: 'https://salvador.supersale.jp/items/114294392',
+    9: 'https://salvador.supersale.jp/items/114294224',
+    10: 'https://salvador.supersale.jp/items/111208414',
+    11: 'https://salvador.supersale.jp/items/111208277',
+    12: 'https://salvador.supersale.jp/items/107958273',
+    13: 'https://salvador.supersale.jp/items/36867009',
+    14: 'https://salvador.supersale.jp/items/29958134',
+    15: 'https://salvador.supersale.jp/items/97290182',
+    16: 'https://salvador.supersale.jp/items/30620592',
+    17: 'https://salvador.supersale.jp/items/95306619',
+    18: 'https://salvador.supersale.jp/items/86213221',
+    19: 'https://salvador.supersale.jp/items/86212288',
+    20: 'https://salvador.supersale.jp/items/84936956',
+};
+
 export const ProductModal = () => {
     const product = useStore($selectedProduct);
 
@@ -32,29 +55,17 @@ export const ProductModal = () => {
                             </p>
 
                             <div className="space-y-3 mt-auto">
-                                {(() => {
-                                    // Parse metadata safely to get URL
-                                    let url = '#';
-                                    try {
-                                        const meta = typeof product.metadata === 'string' ? JSON.parse(product.metadata) : product.metadata;
-                                        if (meta && meta.url) url = meta.url;
-                                    } catch (e) { console.error('Failed to parse metadata', e); }
-
-                                    return (
-                                        <a
-                                            href={url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-                                            onClick={() => {
-                                                // Prevent closing modal? Or maybe close it after clicking?
-                                                // e.stopPropagation(); 
-                                            }}
-                                        >
-                                            <span>👀 商品ページをみてみる</span>
-                                        </a>
-                                    );
-                                })()}
+                                <a
+                                    href={PRODUCT_URLS[product.id] || '#'}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                    }}
+                                >
+                                    <span>商品を見てみる！</span>
+                                </a>
 
                                 <button
                                     onClick={() => selectProduct(null)}
