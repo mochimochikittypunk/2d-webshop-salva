@@ -122,7 +122,8 @@ export const ChatWindow = () => {
 
             if (!response.ok) throw new Error(`API Error: ${response.status}`);
             const data = await response.json();
-            const aiResponse = data.response || 'すみません、うまく聞き取れませんでした。';
+            // User requested to remove markdown '**' logs
+            const aiResponse = (data.response || 'すみません、うまく聞き取れませんでした。').replace(/\*\*/g, '');
 
             // 商品ハイライト検出
             detectAndHighlightProduct(aiResponse);
