@@ -50,6 +50,34 @@ function detectAndHighlightProduct(aiResponse: string): void {
     }
 }
 
+const GAS_LOG_URL = 'https://script.google.com/macros/s/AKfycbw7_kh2fV9USb1xrxSY6mL3GtAf_i1zeRRru63tumzknmYqYZUutbZxwspsvlm6rOuZ/exec';
+
+// Log chat history to Google Spreadsheet
+const logChatToSheet = async (history: any[], note: string = '') => {
+    try {
+        // Filter out system messages if any, keep only user/salva
+        const validHistory = history.filter(msg => msg.role === 'user' || msg.role === 'salva');
+
+        if (validHistory.length === 0) return;
+
+        await fetch(GAS_LOG_URL, {
+            method: 'POST',
+            mode: 'no-cors', // Important for GAS
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                history: validHistory,
+                userId: 'user_' + Math.random().toString(36).substr(2, 9), // Simple session ID
+                note: note
+            })
+        });
+        console.log('Chat history logged to sheet');
+    } catch (e) {
+        console.error('Failed to log chat:', e);
+    }
+};
+
 export const ChatWindow = () => {
     const isOpen = useStore($isChatOpen);
     const history = useStore($chatHistory);
@@ -138,8 +166,11 @@ export const ChatWindow = () => {
                     <button
                         onClick={() => {
                             import('../../features/store/gameStore').then(({ $chatHistory, INITIAL_CHAT_HISTORY }) => {
+                                const currentHistory = $chatHistory.get();
+                                logChatToSheet(currentHistory, 'Manual Reset'); // Log on manual reset
                                 $chatHistory.set(INITIAL_CHAT_HISTORY);
                             });
+                            setIsTyping(false);
                         }}
                         className="absolute top-2 right-2 text-[10px] text-zinc-400 hover:text-white border border-zinc-600 hover:border-zinc-400 rounded px-2 py-0.5 transition-colors z-10"
                     >
@@ -198,7 +229,7 @@ export const ChatWindow = () => {
                                                                 // Step 3: BAD END - Value mismatch
                                                                 else if (opt.action === 'dating_2_rest') {
                                                                     nextMessage = '休みたくないんだ。コーヒーは僕の人生だからね。君とは価値観が合わないみたいだ。';
-                                                                    nextOptions = [{ label: 'BAD END: 価値観の違い (最初に戻る)', value: 'そうですか…', action: 'reset' }];
+                                                                    nextOptions = [{ label: 'BAD END: 価値観の違い (最初に戻る)', value: 'そうですか…', action: 'reset', note: 'BAD END: 価値観' }];
                                                                 }
                                                                 // Step 4: Capability Check
                                                                 else if (opt.action === 'dating_2_help') {
@@ -219,7 +250,7 @@ export const ChatWindow = () => {
                                                                 // Step 6: BAD END - Give up
                                                                 else if (opt.action === 'dating_4_giveup') {
                                                                     nextMessage = 'そう…残念だけど、お互いのためだと思うよ。また普通のお客さんとして来てね。';
-                                                                    nextOptions = [{ label: 'BAD END: 諦め (最初に戻る)', value: 'はい…', action: 'reset' }];
+                                                                    nextOptions = [{ label: 'BAD END: 諦め (最初に戻る)', value: 'はい…', action: 'reset', note: 'BAD END: 諦め' }];
                                                                 }
                                                                 // Step 7: Study path
                                                                 else if (opt.action === 'dating_4_study') {
@@ -232,7 +263,7 @@ export const ChatWindow = () => {
                                                                 // Step 8: BAD END - Not creative
                                                                 else if (opt.action === 'dating_5_latte') {
                                                                     nextMessage = 'カフェオレ…？ それなら僕も作れるんだけど。君じゃなきゃダメな理由が見つからないな。';
-                                                                    nextOptions = [{ label: 'BAD END: 個性不足 (最初に戻る)', value: 'そうですよね…', action: 'reset' }];
+                                                                    nextOptions = [{ label: 'BAD END: 個性不足 (最初に戻る)', value: 'そうですよね…', action: 'reset', note: 'BAD END: 個性不足' }];
                                                                 }
                                                                 // Step 9: Jelly path -> leads to interest
                                                                 else if (opt.action === 'dating_5_jelly') {
@@ -253,7 +284,7 @@ export const ChatWindow = () => {
                                                                 // Step 11: NORMAL END - Business only
                                                                 else if (opt.action === 'dating_4_biz') {
                                                                     nextMessage = 'ビジネスパートナーか…いいね。じゃあまずは履歴書持ってきて。面接しようか。';
-                                                                    nextOptions = [{ label: 'NORMAL END: 就職 (最初に戻る)', value: 'はい、履歴書…', action: 'reset' }];
+                                                                    nextOptions = [{ label: 'NORMAL END: 就職 (最初に戻る)', value: 'はい、履歴書…', action: 'reset', note: 'NORMAL END: 就職' }];
                                                                 }
                                                                 // Step 12: Love path -> date invitation
                                                                 else if (opt.action === 'dating_4_love') {
@@ -291,12 +322,12 @@ export const ChatWindow = () => {
                                                                 // Step 18: HAPPY END - Date confirmed!
                                                                 else if (opt.action === 'dating_9_final') {
                                                                     nextMessage = 'デート…まぁ、そういうことになるのかな。\n\n…楽しみにしてるよ。';
-                                                                    nextOptions = [{ label: '★ HAPPY END ★ デートの約束 (最初に戻る)', value: 'やったー！', action: 'reset' }];
+                                                                    nextOptions = [{ label: '★ HAPPY END ★ デートの約束 (最初に戻る)', value: 'やったー！', action: 'reset', note: 'HAPPY END' }];
                                                                 }
                                                                 // Neutral End - Shy
                                                                 else if (opt.action === 'dating_end_shy') {
                                                                     nextMessage = 'なんだ、びっくりさせないでよ。コーヒーでも飲む？ 落ち着くよ。';
-                                                                    nextOptions = [{ label: '最初に戻る', value: 'うん', action: 'reset' }];
+                                                                    nextOptions = [{ label: '最初に戻る', value: 'うん', action: 'reset', note: 'Shy End' }];
                                                                 }
 
                                                                 if (nextMessage) {
@@ -315,6 +346,9 @@ export const ChatWindow = () => {
                                                     // Reset Logic (Fix for bug where reset triggers API call)
                                                     if (opt.action === 'reset') {
                                                         import('../../features/store/gameStore').then(({ INITIAL_CHAT_HISTORY, $chatHistory }) => {
+                                                            const currentHistory = $chatHistory.get();
+                                                            // Use note if available in the option (for endings), otherwise standard Reset
+                                                            logChatToSheet(currentHistory, opt.note || 'Reset Action');
                                                             $chatHistory.set(INITIAL_CHAT_HISTORY);
                                                         });
                                                         setIsTyping(false);

@@ -16,6 +16,7 @@ export interface ChatOption {
     label: string;
     value: string; // The text to send as user
     action?: string; // Internal action ID
+    note?: string; // Optional metadata for logging (e.g. End Type)
 }
 
 export interface ChatMessage {
