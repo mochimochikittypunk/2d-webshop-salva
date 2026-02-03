@@ -2,6 +2,7 @@ import { useStore } from '@nanostores/react';
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { $chatHistory, $isChatOpen, $highlightedProductId, INITIAL_CHAT_HISTORY } from '../../features/store/gameStore';
+import { InfoModal } from './InfoModal';
 
 // 商品キーワードマッピング（商品名の一部 → 商品ID）
 const PRODUCT_KEYWORDS: Record<string, number> = {
@@ -85,6 +86,8 @@ export const ChatWindow = () => {
     const inputRef = useRef<HTMLTextAreaElement>(null);
     // Add local state for typing indicator
     const [isTyping, setIsTyping] = useState(false);
+    // Add local state for info modal
+    const [isInfoOpen, setIsInfoOpen] = useState(false);
 
     const handleSendMessage = async () => {
         if (!inputRef.current) return;
@@ -163,26 +166,37 @@ export const ChatWindow = () => {
                     exit={{ y: 100, opacity: 0 }}
                     className="absolute bottom-4 left-4 right-4 md:left-[20%] md:right-[20%] bg-black/80 border-2 border-white/20 backdrop-blur-md rounded-lg p-4 h-48 flex flex-col pointer-events-auto group"
                 >
-                    {/* Reset Button */}
-                    <button
-                        onClick={() => {
-                            const currentHistory = $chatHistory.get();
-                            logChatToSheet(currentHistory, 'Manual Reset'); // Log on manual reset
-                            $chatHistory.set(INITIAL_CHAT_HISTORY);
-                            setIsTyping(false);
-                        }}
-                        className="absolute top-2 right-2 text-xs text-zinc-400 hover:text-white border border-zinc-600 hover:border-zinc-400 rounded px-3 py-1.5 transition-colors z-20 cursor-pointer"
-                    >
-                        ↻ 最初に戻る
-                    </button>
+                    {/* Info & Reset Buttons */}
+                    <div className="absolute top-2 right-2 flex gap-2 z-20">
+                        <button
+                            onClick={() => setIsInfoOpen(true)}
+                            className="text-xs text-zinc-400 hover:text-white border border-zinc-600 hover:border-zinc-400 rounded px-3 py-1.5 transition-colors cursor-pointer"
+                        >
+                            Info
+                        </button>
+                        <button
+                            onClick={() => {
+                                const currentHistory = $chatHistory.get();
+                                logChatToSheet(currentHistory, 'Manual Reset'); // Log on manual reset
+                                $chatHistory.set(INITIAL_CHAT_HISTORY);
+                                setIsTyping(false);
+                            }}
+                            className="text-xs text-zinc-400 hover:text-white border border-zinc-600 hover:border-zinc-400 rounded px-3 py-1.5 transition-colors cursor-pointer"
+                        >
+                            ↻ 最初に戻る
+                        </button>
+                    </div>
+
+                    {/* Info Modal */}
+                    <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
 
                     <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-1 mb-1 pr-1">
                         {history.map((msg, idx) => (
                             <div key={idx} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                                 <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                     <span className={`px-2 py-1 rounded-lg text-xs md:text-sm whitespace-pre-wrap max-w-full md:max-w-[600px] ${msg.role === 'user'
-                                            ? 'bg-blue-600/50 text-white'
-                                            : 'bg-yellow-600/20 text-yellow-100 border border-yellow-500/30'
+                                        ? 'bg-blue-600/50 text-white'
+                                        : 'bg-yellow-600/20 text-yellow-100 border border-yellow-500/30'
                                         }`}>
                                         {msg.role === 'salva' && <span className="mr-2 font-bold text-yellow-400">Salva</span>}
                                         {msg.content}
