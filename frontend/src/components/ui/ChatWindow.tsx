@@ -119,33 +119,99 @@ export const ChatWindow = () => {
                 body: JSON.stringify({
                     message: message,
                     history: apiHistory,
-                    isExternal: true
+                    isExternal: true,
+                    stream: true // Request streaming
                 }),
             });
 
-            if (!response.ok) throw new Error(`API Error: ${response.status}`);
-            const data = await response.json();
-            // User requested to remove markdown '**' logs
-            const aiResponse = (data.response || 'すみません、うまく聞き取れませんでした。').replace(/\*\*/g, '');
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status}`);
+            }
 
-            // 商品ハイライト検出
+            const isStream = response.headers.get('content-type')?.includes('text/event-stream');
+            let aiResponse = '';
+
+            if (isStream && response.body) {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                // Add initial empty message for Salva
+                import('../../features/store/gameStore').then(({ $chatHistory }) => {
+                    const currentHistory = $chatHistory.get();
+                    $chatHistory.set([...currentHistory, { role: 'salva', content: '' }]);
+                });
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    // Hide typing indicator as soon as we receive data
+                    setIsTyping(false);
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.trim().startsWith('data: ')) {
+                            const dataStr = line.trim().slice(6);
+                            if (dataStr === '[DONE]') continue;
+
+                            try {
+                                const data = JSON.parse(dataStr);
+                                const text = data.text || '';
+                                aiResponse += text;
+
+                                // Update UI incrementally
+                                const current = $chatHistory.get();
+                                const last = current[current.length - 1];
+                                // Update only if the last message is indeed the one we are streaming
+                                if (last && last.role === 'salva' && !last.options) {
+                                    const newHistory = [...current];
+                                    newHistory[newHistory.length - 1] = {
+                                        ...last,
+                                        content: aiResponse
+                                    };
+                                    $chatHistory.set(newHistory);
+                                }
+                            } catch (e) {
+                                // Ignore parse errors for partial chunks
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Fallback: Standard JSON Response
+                const data = await response.json();
+                aiResponse = (data.response || 'すみません、うまく聞き取れませんでした。').replace(/\*\*/g, '');
+
+                import('../../features/store/gameStore').then(({ $chatHistory }) => {
+                    const currentHistory = $chatHistory.get();
+                    $chatHistory.set([...currentHistory, {
+                        role: 'salva',
+                        content: aiResponse
+                    }]);
+                });
+            }
+
+            // Post-response processing
             detectAndHighlightProduct(aiResponse);
-
-            $chatHistory.set([...$chatHistory.get(), {
-                role: 'salva',
-                content: aiResponse
-            }]);
         } catch (err) {
             console.error('AI Salva API Error:', err);
-            $chatHistory.set([...$chatHistory.get(), {
-                role: 'salva',
-                content: 'すみません、今ちょっと調子が悪くて…もう一度話しかけてくれる？'
-            }]);
+            import('../../features/store/gameStore').then(({ $chatHistory }) => {
+                const currentHistory = $chatHistory.get();
+                // If we were streaming, we might have a partial message. 
+                // For simplicity, just append error or leave it if it has content, but here we append apology
+                $chatHistory.set([...currentHistory, {
+                    role: 'salva',
+                    content: 'すみません、今ちょっと調子が悪くて…もう一度話しかけてくれる？'
+                }]);
+            });
         } finally {
-            // Clear typing status
             setIsTyping(false);
         }
     };
+
+
 
     // Auto-scroll to bottom when history changes or typing starts
     useEffect(() => {
@@ -185,6 +251,7 @@ export const ChatWindow = () => {
                         >
                             ↻ 最初に戻る
                         </button>
+
                     </div>
 
                     {/* Info Modal */}
@@ -385,7 +452,8 @@ export const ChatWindow = () => {
                                                             body: JSON.stringify({
                                                                 message: opt.value,
                                                                 history: apiHistory,
-                                                                isExternal: true
+                                                                isExternal: true,
+                                                                stream: true // Request streaming
                                                             }),
                                                         });
 
@@ -393,18 +461,74 @@ export const ChatWindow = () => {
                                                             throw new Error(`API Error: ${response.status}`);
                                                         }
 
-                                                        const data = await response.json();
-                                                        const aiResponse = (data.response || 'すみません、うまく聞き取れませんでした。').replace(/\*\*/g, '');
+                                                        const isStream = response.headers.get('content-type')?.includes('text/event-stream');
+                                                        let aiResponse = '';
+
+                                                        if (isStream && response.body) {
+                                                            const reader = response.body.getReader();
+                                                            const decoder = new TextDecoder();
+
+                                                            // Add initial empty message for Salva
+                                                            import('../../features/store/gameStore').then(({ $chatHistory }) => {
+                                                                const currentHistory = $chatHistory.get();
+                                                                $chatHistory.set([...currentHistory, { role: 'salva', content: '' }]);
+                                                            });
+
+                                                            while (true) {
+                                                                const { done, value } = await reader.read();
+                                                                if (done) break;
+
+                                                                // Hide typing indicator as soon as we receive data
+                                                                setIsTyping(false);
+
+                                                                const chunk = decoder.decode(value, { stream: true });
+                                                                const lines = chunk.split('\n');
+
+                                                                for (const line of lines) {
+                                                                    if (line.trim().startsWith('data: ')) {
+                                                                        const dataStr = line.trim().slice(6);
+                                                                        if (dataStr === '[DONE]') continue;
+
+                                                                        try {
+                                                                            const data = JSON.parse(dataStr);
+                                                                            const text = data.text || '';
+                                                                            aiResponse += text;
+
+                                                                            // Update UI incrementally
+                                                                            import('../../features/store/gameStore').then(({ $chatHistory }) => {
+                                                                                const current = $chatHistory.get();
+                                                                                const last = current[current.length - 1];
+                                                                                if (last && last.role === 'salva' && !last.options) {
+                                                                                    const newHistory = [...current];
+                                                                                    newHistory[newHistory.length - 1] = {
+                                                                                        ...last,
+                                                                                        content: aiResponse
+                                                                                    };
+                                                                                    $chatHistory.set(newHistory);
+                                                                                }
+                                                                            });
+                                                                        } catch (e) {
+                                                                            // Ignore
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        } else {
+                                                            // Fallback: Standard JSON
+                                                            const data = await response.json();
+                                                            aiResponse = (data.response || 'すみません、うまく聞き取れませんでした。').replace(/\*\*/g, '');
+
+                                                            import('../../features/store/gameStore').then(({ $chatHistory }) => {
+                                                                const currentHistory = $chatHistory.get();
+                                                                $chatHistory.set([...currentHistory, {
+                                                                    role: 'salva',
+                                                                    content: aiResponse
+                                                                }]);
+                                                            });
+                                                        }
 
                                                         detectAndHighlightProduct(aiResponse);
 
-                                                        import('../../features/store/gameStore').then(({ $chatHistory }) => {
-                                                            const currentHistory = $chatHistory.get();
-                                                            $chatHistory.set([...currentHistory, {
-                                                                role: 'salva',
-                                                                content: aiResponse
-                                                            }]);
-                                                        });
                                                     } catch (err) {
                                                         console.error('AI Salva API Error:', err);
                                                         import('../../features/store/gameStore').then(({ $chatHistory }) => {
